@@ -1,0 +1,51 @@
+* annotate-transform
+
+The package provides functions to annotate functions, variables and commands during minibuffer completion.
+
++ ~annotate-transform-variable-name~ (var-name)
+Return VAR-NAME annotated with its value and documentation.
+
++ ~annotate-transform-annotate-var-name~ (var-name)
+Return annotation with value and documentation for VAR-NAME.
+VAR-NAME should be a string.
+
++ ~annotate-transform-get-var-doc~ (sym)
+Return string with annotated documentation of SYM.
+
++ ~annotate-transform-get-var-value~ (sym)
+Return string with formatted value of symbol SYM.
+
++ ~annotate-transform-function-name~ (name)
+Return NAME annotated with its active key binding and documentation.
+NAME should be a string.
+
++ ~annotate-transform-get-function-doc~ (sym)
+Return a stirng with short documentation of symbol SYM or nil.
+SYM should be a symbol.
+
++ ~annotate-transform-get-function-key~ (sym buffer)
+Return string with active key for command SYM in BUFFER.
+SYM should be a symbol.
+
++ ~annotate-transform-annotatable-var-p~ (var-sym)
+Return non nil if VAR-SYM can be annotated.
+
++ ~annotate-transform-annotate-function~ (fn-name)
+Return string with active key and short documentation of FN-NAME.
+FN-NAME should be a string.
+
++ ~annotate-transform-trim~ (str max)
+Trim STR if the length exceeds MAX, else return STR.
+
++ ~annotate-transform-hashtable-badge~
+
++ ~annotate-transform-ignored-variables~
+List of symbols that shouldn't be annotated.
+
++ ~annotate-transform-max-doc-length~
+Max length for displaying documentation.
+
++ ~annotate-transform-max-value-length~
+Max length for displaying value of a variable.
+
+
