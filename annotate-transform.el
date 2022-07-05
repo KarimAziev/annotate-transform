@@ -1,11 +1,11 @@
-;;; annotate-transform.el --- Configure transform -*- lexical-binding: t -*-
+;;; annotate-transform.el --- Annotations utils for Emacs -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 Karim Aziiev <karim.aziiev@gmail.com>
 
 ;; Author: Karim Aziiev <karim.aziiev@gmail.com>
-;; URL: https://github.com/KarimAziev/ohai-emacs
-;; Keywords: help, lisp
-;; Version: 0.1.1
+;; URL: https://github.com/KarimAziev/annotate-transform
+;; Keywords: lisp, help
+;; Version: 0.1.2
 ;; Package-Requires: ((emacs "27.1"))
 
 ;; This file is NOT part of GNU Emacs.
@@ -117,8 +117,7 @@ FN-NAME should be a string."
    (or (get var-sym 'variable-documentation)
        (and
         (keywordp var-sym)
-        (not (eq var-sym nil))
-        (not (eq var-sym t))))))
+        (not (memq var-sym '(nil t)))))))
 
 ;;;###autoload
 (defun annotate-transform-get-function-key (sym buffer)
@@ -240,16 +239,19 @@ NAME should be a string."
          'face 'font-lock-negation-char-face)))))
 
 ;;;###autoload
-(defun annotate-transform-annotate-var-name (var-name)
-  "Return annotation with value and documentation for VAR-NAME.
-VAR-NAME should be a string."
-  (let ((sym (intern var-name)))
+(defun annotate-transform-annotate-var-name (var-name &optional separator)
+  "Concatenate value and documentation of VAR-NAME with SEPARATOR.
+VAR-NAME should be a string.
+Default value for SEPARATOR is space."
+  (let ((sym (if (symbolp var-name)
+                 var-name
+               (intern var-name))))
     (when (annotate-transform-annotatable-var-p sym)
       (string-join (delete nil
                            (list
                             (annotate-transform-get-var-value sym)
                             (annotate-transform-get-var-doc sym)))
-                   "\s"))))
+                   (or separator "\s")))))
 
 ;;;###autoload
 (defun annotate-transform-variable-name (var-name)
