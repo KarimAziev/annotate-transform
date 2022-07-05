@@ -1,43 +1,66 @@
 * annotate-transform
 
-The package provides functions to annotate functions, variables and commands during minibuffer completion.
+Display transformers for variables, commands and functions in Emacs.
 
-+ ~annotate-transform-variable-name~ (var-name)
-Return VAR-NAME annotated with its value and documentation.
+** Installation
 
-+ ~annotate-transform-annotate-var-name~ (var-name)
-Return annotation with value and documentation for VAR-NAME.
-VAR-NAME should be a string.
+*** Manually
 
-+ ~annotate-transform-get-var-doc~ (sym)
-Return string with annotated documentation of SYM.
+Download repository and it to your load path in your init file:
 
-+ ~annotate-transform-get-var-value~ (sym)
-Return string with formatted value of symbol SYM.
+#+begin_src elisp :eval no
 
-+ ~annotate-transform-function-name~ (name)
-Return NAME annotated with its active key binding and documentation.
-NAME should be a string.
+(add-to-list 'load-path "/path/to/annotate-transform/")
 
-+ ~annotate-transform-get-function-doc~ (sym)
-Return a stirng with short documentation of symbol SYM or nil.
-SYM should be a symbol.
+(require 'annotate-transform)
 
-+ ~annotate-transform-get-function-key~ (sym buffer)
-Return string with active key for command SYM in BUFFER.
-SYM should be a symbol.
+#+end_src
 
-+ ~annotate-transform-annotatable-var-p~ (var-sym)
-Return non nil if VAR-SYM can be annotated.
+*** With use-package and straight
 
-+ ~annotate-transform-annotate-function~ (fn-name)
-Return string with active key and short documentation of FN-NAME.
-FN-NAME should be a string.
+#+begin_src elisp :eval no
 
-+ ~annotate-transform-trim~ (str max)
-Trim STR if the length exceeds MAX, else return STR.
+(use-package annotate-transform
+  :straight (:repo "KarimAziev/annotate-transform"
+                   :type git
+                   :host github))
 
-+ ~annotate-transform-hashtable-badge~
+#+end_src
+** Usage examples
+
+Extending obarray items with annotations.
+
+#+begin_src emacs-lisp
+
+(require 'annotate-transform)
+
+(let ((annotf (lambda (str) (concat " "
+                                    (or (annotate-transform-annotate-var-name str)
+                                        (annotate-transform-function-name str) "")))))
+  (completing-read "Candidates: "
+                   (lambda (str pred action)
+                     (if (eq action 'metadata)
+                         `(metadata
+                           (annotation-function . ,annotf))
+                       (complete-with-action action obarray str pred)))))
+#+end_src
+
+Extending ~ivy~ and ~counsel~ items with annotations.
+
+#+begin_src emacs-lisp
+
+(require 'annotate-transform)
+
+(ivy-configure 'counsel-describe-variable
+  :display-transformer-fn #'annotate-transform-variable-name)
+
+(ivy-configure 'counsel-describe-function
+  :display-transformer-fn 'annotate-transform-function-name)
+#+end_src
+
+
+
+** Customization
 
 + ~annotate-transform-ignored-variables~
 List of symbols that shouldn't be annotated.
@@ -47,5 +70,3 @@ Max length for displaying documentation.
 
 + ~annotate-transform-max-value-length~
 Max length for displaying value of a variable.
-
-
