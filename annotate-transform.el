@@ -1,4 +1,4 @@
-;;; annotate-transform.el --- Annotations utils for Emacs -*- lexical-binding: t -*-
+;;; annotate-transform.el --- Display transformers for variables and functions -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2022 Karim Aziiev <karim.aziiev@gmail.com>
 
@@ -42,6 +42,8 @@
 
 
 (require 'cl-lib)
+(eval-when-compile
+  (require 'subr-x))
 
 (defcustom annotate-transform-max-value-length 60
   "Max length for displaying value of a variable."
@@ -109,15 +111,21 @@ FN-NAME should be a string."
           sym)))
        "\s"))))
 
+(defun annotate-transform-symbol-variable-p (symb)
+  "Return t if SYMB is a variable."
+  (and
+   (symbolp symb)
+   (boundp symb)
+   (or (get symb 'variable-documentation)
+       (and
+        (keywordp symb)
+        (not (memq symb '(nil t)))))))
+
 (defun annotate-transform-annotatable-var-p (var-sym)
   "Return non nil if VAR-SYM can be annotated."
   (and
-   (null (memq var-sym annotate-transform-ignored-variables))
-   (boundp var-sym)
-   (or (get var-sym 'variable-documentation)
-       (and
-        (keywordp var-sym)
-        (not (memq var-sym '(nil t)))))))
+   (annotate-transform-symbol-variable-p var-sym)
+   (null (memq var-sym annotate-transform-ignored-variables))))
 
 ;;;###autoload
 (defun annotate-transform-get-function-key (sym buffer)
