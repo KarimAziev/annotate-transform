@@ -94,10 +94,11 @@
 (defun annotate-transform-annotate-function (fn-name)
   "Return string with active key and short documentation of FN-NAME.
 FN-NAME should be a string."
-  (let ((buff (if-let ((minw (minibuffer-selected-window)))
-                  (with-selected-window minw
-                    (current-buffer))
-                (current-buffer)))
+  (let ((buff
+         (if-let ((minw (minibuffer-selected-window)))
+             (with-selected-window minw
+               (current-buffer))
+           (current-buffer)))
         (sym))
     (setq sym (intern fn-name))
     (when (symbolp sym)
@@ -105,6 +106,7 @@ FN-NAME should be a string."
        (delete
         nil
         (list
+         (ignore-errors (elisp-get-fnsym-args-string sym))
          (annotate-transform-get-function-key
           sym buff)
          (annotate-transform-get-function-doc
@@ -170,23 +172,16 @@ SYM should be a symbol."
   "Return NAME annotated with its active key binding and documentation.
 NAME should be a string."
   (or (ignore-errors
-        (let ((buff (if-let ((minw (minibuffer-selected-window)))
-                        (with-selected-window minw
-                          (current-buffer))
-                      (current-buffer)))
+        (let ((buff
+               (if-let ((minw (minibuffer-selected-window)))
+                   (with-selected-window minw
+                     (current-buffer))
+                 (current-buffer)))
               (sym))
           (setq sym (intern name))
           (when (symbolp sym)
             (let ((result (concat name "\s"
-                                  (string-join
-                                   (delete
-                                    nil
-                                    (list
-                                     (annotate-transform-get-function-key
-                                      sym buff)
-                                     (annotate-transform-get-function-doc
-                                      sym)))
-                                   "\s"))))
+                                  (annotate-transform-annotate-function name))))
               (cond ((eq sym major-mode)
                      (propertize result 'face 'font-lock-variable-name-face))
                     ((and
