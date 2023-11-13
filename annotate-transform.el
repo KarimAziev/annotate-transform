@@ -6,7 +6,8 @@
 ;; URL: https://github.com/KarimAziev/annotate-transform
 ;; Keywords: lisp, help
 ;; Version: 0.1.2
-;; Package-Requires: ((emacs "27.1"))
+;; Package-Requires: ((emacs "29.1"))
+;; SPDX-License-Identifier: GPL-3.0-or-later
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -55,7 +56,7 @@
   :type 'integer
   :group 'annotate-transform)
 
-(defcustom annotate-transform-align-column 50
+(defcustom annotate-transform-align-column 80
   "Whether to align descriptions.
 If nil, don't align, if integer align to those column."
   :type '(choice (const :tag "No align" nil)
@@ -122,6 +123,8 @@ last three characters replaced by an ellipsis."
           (t str))))
 
 
+
+
 (defun annotate-transform-annotate-function (fn-name)
   "Return string with active key and short documentation of FN-NAME.
 FN-NAME should be a string."
@@ -145,7 +148,7 @@ FN-NAME should be a string."
                             "[arg list not available until function definition is loaded.]"))
               "[unknown]"
             (or args-str ""))
-          annotate-transform-align-column)
+          20)
          "\s"
          "\s"
          (annotate-transform-trim-or-pad
@@ -258,17 +261,11 @@ or elsewhere, return a 1-line docstring."
                                (buffer-string)))
             (t argstring)))))
 
-(defvar annotate-transform-longest-fn-name nil)
 
 (defun annotate-transform-function-name (name)
   "Return NAME annotated with its active key binding and documentation.
 NAME should be a string."
   (or (ignore-errors
-        (unless annotate-transform-longest-fn-name
-          (setq annotate-transform-longest-fn-name
-                (1+ (apply #'max (mapcar
-                                  (lambda (s) (length (symbol-name s)))
-                                  (seq-filter 'functionp obarray))))))
         (let ((buff
                (if-let ((minw (minibuffer-selected-window)))
                    (with-selected-window minw
@@ -277,17 +274,45 @@ NAME should be a string."
               (sym))
           (setq sym (intern name))
           (when (symbolp sym)
-            (let* ((result
+            (let* ((args-str
+                    (let ((str (ignore-errors
+                                 (annotate-transform-get-args-string
+                                  sym))))
+                      (if
+                          (and str
+                               (string= str
+                                        "[arg list not available until function definition is loaded.]"))
+                          "[unknown]"
+                        (when str
+                          (add-face-text-property 0 1
+                                                  'font-lock-keyword-face nil
+                                                  str)
+                          (add-face-text-property (1- (length str))
+                                                  (length str)
+                                                  'font-lock-keyword-face
+                                                  nil str))
+                        str)))
+                   (result
                     (concat
                      (annotate-transform-trim-or-pad
                       (concat name
                               (if-let ((k (annotate-transform-get-function-key
                                            sym buff)))
                                   (concat " " k)
-                                ""))
-                      annotate-transform-longest-fn-name)
+                                "")
+                              " " (or args-str ""))
+                      annotate-transform-align-column)
                      "\s"
-                     (annotate-transform-annotate-function name))))
+                     (annotate-transform-trim-or-pad
+                      (if
+                          (autoloadp (symbol-function sym))
+                          annotate-transform-autoload-badge
+                        "")
+                      9)
+                     (annotate-transform-trim-or-pad
+                      (annotate-transform-get-function-doc
+                       sym)
+                      90))))
               (cond ((eq sym major-mode)
                      (propertize result 'face 'font-lock-variable-name-face))
                     ((and
