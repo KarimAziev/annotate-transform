@@ -176,7 +176,7 @@ A string used to represent the boolean value t in formatted output.
 It is visually enhanced with the `success' face to distinguish it from other
 types of values in the output.
 
-This customization allows for a clear and immediate recognition of `t' values
+This customization allows for a clear and immediate recognition of t values
 when inspecting Emacs Lisp values, enhancing readability and debugging
 efficiency.
 
