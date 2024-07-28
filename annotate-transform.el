@@ -87,57 +87,91 @@ If nil, don't align, if integer align to those column."
   :type '(repeat symbol)
   :group 'annotate-transform)
 
-(defcustom annotate-transform-hashtable-badge (propertize "HASH-TABLE"
-                                                          'face
-                                                          'font-lock-warning-face)
-  "Badge displayed for hash table values.
+(defcustom annotate-transform-variable-alist `((,(apply-partially #'eq t) "t"
+                                                nil)
+                                               (not "nil" font-lock-comment-face)
+                                               (numberp number-to-string nil)
+                                               (symbolp symbol-name nil)
+                                               (syntax-table-p "SYNTAX-TABLE"
+                                                font-lock-warning-face)
+                                               (annotate-transform-oclosure-p
+                                                "#<oclosure"
+                                                font-lock-warning-face)
+                                               (byte-code-function-p
+                                                "#<byte-code-function>"
+                                                font-lock-warning-face)
+                                               (recordp "RECORD"
+                                                font-lock-warning-face)
+                                               (bool-vector-p "BOOL-VECTOR"
+                                                font-lock-warning-face)
+                                               (annotate-transform-abbrev-table-p
+                                                "ABBREV-TABLE")
+                                               (char-table-p "CHARTABLE"
+                                                font-lock-builtin-face)
+                                               (compiled-function-p
+                                                "COMPILED-FUNCTION"
+                                                font-lock-warning-face)
+                                               (annotate-transform-long-vector-p
+                                                annotate-transform-long-vector
+                                                font-lock-warning-face)
+                                               (functionp "FUNCTION"
+                                                font-lock-warning-face)
+                                               (obarrayp "OBARRAY"
+                                                font-lock-warning-face)
+                                               (keymapp "KEYMAP"
+                                                font-lock-builtin-face)
+                                               (hash-table-p "HASH-TABLE"
+                                                font-lock-warning-face)
+                                               (autoloadp "AUTOLOAD"
+                                                font-lock-builtin-face)
+                                               (annotate-transform--multi-line-stringp
+                                                "MULTI LINE STRING"
+                                                font-lock-string-face))
+  "Alist mapping predicates to their string representations and optional faces.
 
-A badge used to visually represent hash tables in formatted output.
+An alist mapping predicates to their corresponding string
+representations and optional font-lock faces.
 
-It is displayed as \"HASH-TABLE\" with a warning face to distinguish hash tables
-from other types of values in the output.
+Each element is a list where the first item is a predicate function
+that takes a value and returns non-nil if the value matches the
+predicate.
 
-The appearance of the badge can be customized by changing its face or text.
+The second item is either a string or a function. If it is a string,
+it will be used as the representation for values matching the
+predicate. If it is a function, it will be called with the value and
+should return a string representation.
 
-Designed for use in functions that format Emacs Lisp values for readability,
-particularly when displaying complex data structures."
+The third item is an optional face to apply to the string
+representation. If nil, no face will be applied."
   :group 'annotate-transform
-  :type 'string)
+  :type '(alist
+          :key-type function
+          :value-type (list
+                       (radio
+                        string
+                        function)
+                       (radio :tag "Face"
+                        (face)
+                        (const nil)))))
+
+(defvar annotate-transform-hash (make-hash-table :test #'equal))
+
+(defun annotate-transform-cache-variable-annotation (&rest _)
+  "Update `annotate-transform-hash' with annotated variable names."
+  (setq annotate-transform-hash (clrhash annotate-transform-hash))
+  (mapatoms (lambda (it)
+              (when (annotate-transform-symbol-variable-p it)
+                (let ((name (symbol-name it)))
+                  (puthash name
+                           (annotate-transform-variable-name name)
+                           annotate-transform-hash))))))
 
 
-(defcustom annotate-transform-obarray-badge (propertize "OBARRAY"
-                                                        'face
-                                                        'font-lock-warning-face)
-  "Badge text for obarray values, styled with a warning face.
 
-A string used to visually represent obarray values in annotations.
-
-It is displayed with a warning face to highlight its presence among other
-values. Customize to change the appearance or text of the badge for obarray
-values in annotated transformations."
-  :group 'annotate-transform
-  :type 'string)
-
-(defcustom annotate-transform-syntax-table-badge (propertize "SYNTAX-TABLE"
-                                                             'face
-                                                             'font-lock-warning-face)
-  "Badge displayed for syntax table values.
-
-Specifies the badge to represent syntax tables in formatted annotations.
-
-The default value is the string \"SYNTAX-TABLE\" with a warning face applied to
-it, indicating that the value being annotated is a syntax table.
-
-To customize, set it to a string that represents syntax tables in a way that is
-meaningful for the context in which annotations are used. The string can include
-text properties such as faces to improve visual distinction."
-  :group 'annotate-transform
-  :type 'string)
-
-(defcustom annotate-transform-compiled-function-badge (propertize "COMPILED-FUNCTION"
-                                                                  'face
-                                                                  'font-lock-warning-face)
-  "Badge for displaying compiled functions visually.
+(defcustom annotate-transform-not-bound-value-badge (propertize "NOT BOUND"
+                                                                'face
+                                                                'font-lock-warning-face)
+  "Badge for displaying not bounded variables values.
 
 Specifies the badge to represent compiled functions in annotations.
 
@@ -147,57 +181,6 @@ to it, indicating that the value being annotated is a compiled function.
 To customize, set it to a string that visually distinguishes compiled functions
 in your annotations. Applying a specific face for emphasis or differentiation is
 recommended."
-  :group 'annotate-transform
-  :type 'string)
-
-(defcustom annotate-transform-function-badge (propertize "FUNCTION"
-                                                         'face
-                                                         'font-lock-warning-face)
-  "Default badge for displaying functions.
-
-A string used to visually represent Emacs Lisp function values in annotations.
-
-The default value is the word \"FUNCTION\" with a warning face applied to it,
-making function values easily distinguishable in annotated content.
-
-To customize, set it to any string value. Applying text properties, such as a
-specific face, can enhance visibility and differentiation from other types of
-values."
-  :group 'annotate-transform
-  :type 'string)
-
-(defcustom annotate-transform-t-badge (propertize "t"
-                                                  'face
-                                                  'success)
-  "Badge displayed for `true' values in annotations.
-
-A string used to represent the boolean value t in formatted output.
-
-It is visually enhanced with the `success' face to distinguish it from other
-types of values in the output.
-
-This customization allows for a clear and immediate recognition of t values
-when inspecting Emacs Lisp values, enhancing readability and debugging
-efficiency.
-
-To change the representation, modify this variable to a different string or use
-`propertize' to apply a different face or visual effect."
-  :group 'annotate-transform
-  :type 'string)
-
-(defcustom annotate-transform-nil-badge (propertize "nil"
-                                                    'face
-                                                    'font-lock-comment-face)
-  "Display style for nil values in annotations.
-
-Specifies the badge to represent nil values in annotations.
-
-The default is \"nil\" styled with `font-lock-comment-face' to distinguish nil
-values visually in annotations.
-
-To customize, set to a string that represents nil values as desired,
-optionally using `propertize' to apply text properties such as face changes for
-styling."
   :group 'annotate-transform
   :type 'string)
 
@@ -220,21 +203,6 @@ to personal or project-specific aesthetics and readability preferences."
   :group 'annotate-transform
   :type 'string)
 
-(defcustom annotate-transform-keymap-badge (propertize "KEYMAP"
-                                                       'face
-                                                       'font-lock-builtin-face)
-  "String to visually represent keymaps in annotations.
-
-Specifies the badge text to represent keymaps in transformed annotations.
-
-The default value is the string \"KEYMAP\" with a font face of
-`font-lock-builtin-face', making it visually distinct in annotations.
-
-To customize, set it to a string that represents keymaps in a way that fits the
-desired annotation style. The string can be propertized to include font face
-attributes for styling."
-  :group 'annotate-transform
-  :type 'string)
 
 (defun annotate-transform-trim (str max)
   "Trim STR if the length exceeds MAX, else return STR."
@@ -256,12 +224,10 @@ last three characters replaced by an ellipsis."
   (let ((len (length str)))
     (unless max-len (setq max-len min-len))
     (cond ((> len max-len)
-           (concat (substring str 0 (- max-len 3)) "..."))
+           (concat (substring-no-properties str 0 (- max-len 3)) "..."))
           ((< len min-len)
            (concat str (make-string (- min-len len) ?\ )))
           (t str))))
-
-
 
 
 (defun annotate-transform-annotate-function (fn-name)
@@ -300,10 +266,9 @@ FN-NAME should be a string."
   (and
    (symbolp symb)
    (boundp symb)
-   (or (get symb 'variable-documentation)
-       (and
-        (keywordp symb)
-        (not (memq symb '(nil t)))))))
+   (or (and (boundp symb)
+            (not (keywordp symb)))
+       (get symb 'variable-documentation))))
 
 (defun annotate-transform-annotatable-var-p (var-sym)
   "Return non nil if VAR-SYM can be annotated."
@@ -463,44 +428,106 @@ NAME should be a string."
                      (t result)))))))
       name))
 
-(defun annotate-transform--format-value (val)
-  "Format various Emacs Lisp values into readable strings or badges.
+(defun annotate-transform-read-variable ()
+  "Annotate-Transform."
+  (let ((vals)
+        (orig-buffer (current-buffer)))
+    (mapatoms
+     (lambda (sym)
+       (when (or (get sym 'variable-documentation)
+                 (and (not (keywordp sym))
+                      ;; Since the variable may only exist in the
+                      ;; original buffer, we have to look for it
+                      ;; there.
+                      (buffer-local-boundp sym orig-buffer)))
+         (push
+          (cons sym
+                (annotate-transform--format-value
+                 (condition-case nil
+                     (symbol-value sym)
+                   (error (message "sym %s unbound" sym)
+                          "NOT_BOUND"))
+                 annotate-transform-max-value-length))
+          vals))))
+    (length vals)))
 
-Argument VAL is the value to format."
-  (pcase val
-    ((pred (eq t))
-     annotate-transform-t-badge)
-    ((pred (eq nil))
-     annotate-transform-nil-badge)
-    ((pred (syntax-table-p))
-     annotate-transform-syntax-table-badge)
-    ((pred (compiled-function-p))
-     annotate-transform-compiled-function-badge)
-    ((pred (symbolp))
-     (format "%s" val))
-    ((pred (stringp))
-     (propertize
-      (replace-regexp-in-string "[\n\r]" "\s"
-                                (prin1-to-string val))
-      'face 'font-lock-string-face))
-    ((pred (functionp))
-     annotate-transform-function-badge)
-    ((pred (obarrayp))
-     annotate-transform-obarray-badge)
-    ((pred (keymapp))
-     annotate-transform-keymap-badge)
-    ((pred (hash-table-p))
-     (let* ((hash-keys
-             (hash-table-keys val))
-            (description (format "%s" hash-keys)))
-       (concat annotate-transform-hashtable-badge "\s"
-               (format "(%s) %s"
-                       (hash-table-size val)
-                       (annotate-transform-trim
-                        description
-                        annotate-transform-max-value-length)))))
-    (_ (propertize (replace-regexp-in-string "[\n\r]" "\s" (format "%s" val))
-                   'face 'font-lock-variable-name-face))))
+(defun annotate-transform-abbrev-table-p (val)
+  "Return non-nil if VAL is an abbreviation table.
+
+Argument VAL is the value to be checked if it is an abbrev table."
+  (or (and (eval-when-compile (< emacs-major-version 30))
+           (vectorp val)
+           (ignore-errors (abbrev-table-p val)))
+      (abbrev-table-p val)))
+
+(defun annotate-transform-oclosure-p (val)
+  "Return non-nil if VAL is an oclosure.
+
+Argument VAL is the value to be checked if it is an oclosure."
+  (and (fboundp 'oclosure-type)
+       (oclosure-type val)))
+
+
+(defun annotate-transform--multi-line-stringp (value)
+  "Check if VALUE is a string containing newline, carriage return, or form feed.
+
+Argument VALUE is the string to be checked for multiple lines."
+  (and (stringp value)
+       (string-match-p "[\n\r\f]" value)))
+
+(defun annotate-transform-long-vector-p (vect)
+  "Check if VECT is a vector with a length of at least 256.
+
+Argument VECT is the vector to be checked for length and type."
+  (and (vectorp vect)
+       (>= (length vect) 256)))
+
+(defun annotate-transform-long-vector (vect)
+  "Return a formatted string indicating the length of the vector VECT.
+
+Argument VECT is the vector to be transformed and annotated."
+  (format "LONG VECTOR (%d)" (length vect)))
+
+(defun annotate-transform-truncate-newlines (val)
+  "Return VAL truncated at the first newline or carriage return character.
+
+Argument VAL is the string to be truncated at the first newline character."
+  (let* ((start (string-match-p "[\n\r\f]" val)))
+    (substring-no-properties val 0 start)))
+
+(defun annotate-transform--format-value (val &optional max-len)
+  "Format VAL based on its type, optionally trimming it to MAX-LEN.
+
+Argument VAL is the value to be formatted.
+
+Optional argument MAX-LEN is the maximum length of the formatted string."
+  (pcase-let ((`(,_pred ,formatter ,face)
+               (seq-find (pcase-lambda (`(,pred . _))
+                           (funcall pred val))
+                         annotate-transform-variable-alist)))
+    (cond
+     ((not formatter)
+      (if (stringp val)
+          (propertize
+           (prin1-to-string
+            (annotate-transform-truncate-newlines
+             (annotate-transform-trim
+              val
+              (or max-len
+                  annotate-transform-max-value-length))))
+           'face
+           'font-lock-string-face)
+        (let ((str (annotate-transform-truncate-newlines
+                    (prin1-to-string
+                     val))))
+          (annotate-transform-trim str
+                                   (or max-len
+                                       annotate-transform-max-value-length)))))
+     ((stringp formatter)
+      (propertize (substring-no-properties formatter)
+                  'face face))
+     ((functionp formatter)
+      (funcall formatter val)))))
 
 (defun annotate-transform-get-var-value (sym)
   "Return string with formatted value of symbol SYM."
@@ -542,28 +569,44 @@ string to separate the variable value and its documentation."
                           (annotate-transform-get-var-doc sym)))
                    (or separator "\s")))))
 
+
 (defun annotate-transform-variable-name (var-name)
   "Return VAR-NAME annotated with its value and documentation."
-  (let* ((sym (intern var-name))
-         (doc (annotate-transform-get-var-doc sym))
-         (value
-          (ignore-errors
-            (if-let ((minw (minibuffer-selected-window)))
-                (with-selected-window minw
-                  (buffer-local-value sym (current-buffer)))
-              (symbol-value sym)))))
-    (if (not (or value doc))
-        var-name
-      (string-join
-       (delq nil
-             (list
-              (annotate-transform-trim-or-pad var-name 50)
-              (annotate-transform-trim-or-pad
-               (annotate-transform--format-value value)
-               (if doc annotate-transform-max-value-length 0)
-               annotate-transform-max-value-length)
-              doc))
-       " "))))
+  (or (gethash var-name annotate-transform-hash)
+      (let* ((sym (intern var-name))
+             (doc (annotate-transform-get-var-doc sym))
+             (unbound-var)
+             (value)
+             (res))
+        (condition-case nil
+            (setq value
+                  (if-let ((minw (minibuffer-selected-window)))
+                      (with-selected-window minw
+                        (buffer-local-value sym (current-buffer)))
+                    (symbol-value sym)))
+          (error (setq unbound-var t)))
+        (setq res (if (not (or value doc))
+                      var-name
+                    (concat
+                     (annotate-transform-trim-or-pad var-name 50)
+                     " "
+                     (let
+                         ((str
+                           (if unbound-var
+                               (annotate-transform-trim-or-pad
+                                annotate-transform-not-bound-value-badge
+                                annotate-transform-max-value-length)
+                             (annotate-transform--format-value
+                              value
+                              annotate-transform-max-value-length))))
+                       (if (and doc
+                                (< (length str) annotate-transform-max-value-length))
+                           (concat str (make-string
+                                        (- annotate-transform-max-value-length (length str))
+                                        ?\ ))
+                         str))
+                     doc)))
+        res)))
 
 (provide 'annotate-transform)
 ;;; annotate-transform.el ends here
