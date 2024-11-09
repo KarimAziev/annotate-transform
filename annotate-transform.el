@@ -299,7 +299,7 @@ SYM should be a symbol."
 (defun annotate-transform-get-function-doc (sym)
   "Return a stirng with short documentation of symbol SYM or nil.
 SYM should be a symbol."
-  (when-let ((documentation
+  (when-let* ((documentation
               (if (fboundp sym)
                   (documentation sym t)
                 (documentation-property
@@ -372,7 +372,7 @@ NAME should be a string."
   (or (ignore-errors
         (string-trim-right
          (let ((buff
-                (if-let ((minw (minibuffer-selected-window)))
+                (if-let* ((minw (minibuffer-selected-window)))
                     (with-selected-window minw
                       (current-buffer))
                   (current-buffer)))
@@ -401,7 +401,7 @@ NAME should be a string."
                      (concat
                       (annotate-transform-trim-or-pad
                        (concat name
-                               (if-let ((k (annotate-transform-get-function-key
+                               (if-let* ((k (annotate-transform-get-function-key
                                             sym buff)))
                                    (concat " " k)
                                  "")
@@ -533,7 +533,7 @@ Optional argument MAX-LEN is the maximum length of the formatted string."
   "Return string with formatted value of symbol SYM."
   (ignore-errors
     (let ((val
-           (if-let ((minw (minibuffer-selected-window)))
+           (if-let* ((minw (minibuffer-selected-window)))
                (with-selected-window minw
                  (buffer-local-value sym (current-buffer)))
              (symbol-value sym))))
@@ -542,7 +542,7 @@ Optional argument MAX-LEN is the maximum length of the formatted string."
 (defun annotate-transform-get-var-doc (sym)
   "Return string with annotated documentation of SYM."
   (ignore-errors
-    (when-let ((doc (documentation-property sym 'variable-documentation t)))
+    (when-let* ((doc (documentation-property sym 'variable-documentation t)))
       (let ((description (string-trim
                           (replace-regexp-in-string
                            "[\n].+" "" (substring-no-properties
@@ -580,7 +580,7 @@ string to separate the variable value and its documentation."
              (res))
         (condition-case nil
             (setq value
-                  (if-let ((minw (minibuffer-selected-window)))
+                  (if-let* ((minw (minibuffer-selected-window)))
                       (with-selected-window minw
                         (buffer-local-value sym (current-buffer)))
                     (symbol-value sym)))
